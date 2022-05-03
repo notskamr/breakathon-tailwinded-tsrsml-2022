@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <script src="../scripts/break-a-thon.js" defer></script>
+    <title>Break-a-thon | Round </title>
+
+    <script>
+        const FirstName = "<%= encryptedData[0] %>"
+        const LastName = "<%= encryptedData[1] %>"
+        const FavoriteColor = "<%= encryptedData[2] %>"
+        const PetsName = "<%= encryptedData[3] %>"
+
+
+        const PASSWORD = "<%= password %>"
+        var aspects = '<%= aspects %>'
+        const ASPECTS = aspects.split(",")
+
+        console.log(PASSWORD, ASPECTS, FirstName, LastName, FavoriteColor, PetsName)
+    </script>
+</head>
+<body>
+    <header>
+        <nav style="padding: 20px" class="navbar navbar-light bg-light">
+            <a style="font-size: 1.6rem;" class="navbar-brand mx-auto" href="#">
+              Break-a-Thon
+            </a>
+            <p id="header-data">
+                
+            </p>
+          </nav>
+    </header>
+    <p id="countdown"></p>
+    <p>Name: <%= encryptedData[0] %></p>
+    <p>Birthday: <%= person['person']['birthday'][1]['day'][1] %> <%= person['person']['birthday'][1]['month'] %> <%= person['person']['birthday'][1]['year'] %></p>
+    <p>Favorite Color: <%= encryptedData[1] %></p>
+    <p>Pet's Name: <%= encryptedData[2] %> (<%= person['pet']['species'] %>)</p>
+    <h1>Aspects: </h1>
+    <div id="aspect-container">
+    </div>
+
+    <form id="guess-pass-form">
+        <input type="text" id="password" placeholder="Your guess!" required>
+        <input type="submit">
+    </form>
+
+    <p id="message"></p>
+
+    <script>
+
+        if (!JSON.parse(localStorage.getItem("teams"))) window.location.replace('/')
+        if (!JSON.parse(localStorage.getItem("state"))) localStorage.setItem("state", JSON.stringify({ round: 1, stage: 1 }))
+
+        var TEAMS = JSON.parse(localStorage.getItem("teams"))
+        var STATE = JSON.parse(localStorage.getItem("state"))
+
+        const ROUND = STATE['round']
+        const STAGE = STATE['stage']
+
+        document.title = `Break-a-thon | Round ${ROUND}, Stage ${STAGE}`
+
+        const headerData = document.getElementById("header-data")
+        
+        const table = 
+        `
+        <table>
+        <tr>
+            <th>Team Name</th>
+            <th>Score</th>
+        </tr>
+        <tr>
+            <td> ${TEAMS['team1'].name}</td>
+            <td> ${TEAMS['team1'].score}</td>
+        </tr>
+        <tr>
+            <td> ${TEAMS['team2'].name}</td>
+            <td> ${TEAMS['team2'].score}</td>
+        </tr>        
+        <tr>
+            <td> ${TEAMS['team3'].name}</td>
+            <td> ${TEAMS['team3'].score}</td>
+        </tr>
+        <tr>
+            <td> ${TEAMS['team4'].name}</td>
+            <td> ${TEAMS['team4'].score}</td>
+        </tr>
+        </table>
+        `
+
+        headerData.innerHTML = `Round ${ROUND}, Team ${STAGE}: ${TEAMS[`team${STAGE}`]['name']} <br> ` + table
+
+        window.onload = async () => {
+            await fetch('/round', {
+                method: "POST",
+                headers: {'Content-Type': "application/json"},
+                body: JSON.stringify({ teams: TEAMS, state: STATE })
+            })
+        }
+
+        const form = document.getElementById('guess-pass-form')
+        form.addEventListener('submit', check)
+        form.addEventListener('timeOut', next)
+        async function check(e) {
+            const messageBox = document.getElementById("message")
+            e.preventDefault()
+
+            const guessedPass = document.getElementById("password").value
+            if (guessedPass == PASSWORD) {
+                scoreScored = 100
+                if (time < (3/4) * countdownTime) scoreScored = 75
+                if (time < (2/4) * countdownTime) scoreScored = 50
+                if (time < (1/4) * countdownTime) scoreScored = 25
+                if (time < (1/4) * countdownTime) scoreScored = 25
+
+                TEAMS[`team${STAGE}`]['score'] = TEAMS[`team${STAGE}`]['score'] + scoreScored
+                messageBox.innerHTML = `Let's go! Team ${TEAMS[`team${STAGE}`]['name']} scored ${scoreScored}!`
+            }
+
+            else {
+                messageBox.innerHTML = `Better luck next time, Team ${TEAMS[`team${STAGE}`]['name']}. Incorrect.`
+            }
+
+            await sleep(2500)
+
+            var nextStage;
+            var nextRound;
+            if (STAGE == 4) { nextStage = 1; nextRound = ROUND + 1; messageBox.innerHTML = `Time for Round ${nextRound}!` } else { nextStage = STAGE + 1; nextRound = ROUND}
+            
+
+            STATE['round'] = nextRound
+            STATE['stage'] = nextStage
+
+            localStorage.setItem("teams", JSON.stringify(TEAMS))
+            localStorage.setItem("state", JSON.stringify(STATE))
+
+
+            window.location.replace('/round')
+        }
+
+        async function next(e) {
+            const messageBox = document.getElementById("message")
+            e.preventDefault()
+            messageBox.innerHTML = `You ran out of time!`
+
+            await sleep(2500)
+
+            var nextStage;
+            var nextRound;
+            if (STAGE == 4) { nextStage = 1; nextRound = ROUND + 1 } else { nextStage = STAGE + 1; nextRound = ROUND}
+            
+
+            STATE['round'] = nextRound
+            STATE['stage'] = nextStage
+
+            localStorage.setItem("teams", JSON.stringify(TEAMS))
+            localStorage.setItem("state", JSON.stringify(STATE))
+
+            window.location.replace('/round')
+        }
+        
+        const aspectContainer = document.getElementById("aspect-container")
+        for (let i = 0; i < ASPECTS.length; i++) {
+            console.log(ASPECTS[i])
+            const p = document.createElement("p")
+            p.appendChild(document.createTextNode(ASPECTS[i]))
+            aspectContainer.appendChild(p)
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }   
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+</body>
+</html>
